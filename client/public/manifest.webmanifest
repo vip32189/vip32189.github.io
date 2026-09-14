@@ -1,0 +1,16 @@
+{
+  "name": "Bolsillo claro · Organiza tu dinero",
+  "short_name": "Bolsillo claro",
+  "description": "Organiza tus ingresos entre ocio, ahorros y emprendimiento.",
+  "lang": "es-CO",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f7f2",
+  "theme_color": "#202a25",
+  "categories": ["finance", "lifestyle"],
+  "icons": [
+    { "src": "/pwa-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
