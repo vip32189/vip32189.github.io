@@ -6,6 +6,7 @@ import {
   Coins,
   Gamepad2,
   Lightbulb,
+  MinusCircle,
   Pencil,
   Plus,
   RotateCcw,
@@ -121,6 +122,48 @@ function EditField({
   );
 }
 
+function SubtractField({
+  label,
+  maxValue,
+  onSave,
+  onCancel,
+}: {
+  label: string;
+  maxValue: number;
+  onSave: (value: number) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  return (
+    <div className="edit-field" onClick={(event) => event.stopPropagation()}>
+      <label htmlFor={`subtract-${label}`}>Restar de {label} · disponible {formatMoney(maxValue)}</label>
+      <div className="edit-field-row">
+        <span className="input-prefix">−$</span>
+        <input
+          id={`subtract-${label}`}
+          autoFocus
+          inputMode="numeric"
+          placeholder="0"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value.replace(/[^0-9]/g, ""))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onSave(Number(draft));
+            if (event.key === "Escape") onCancel();
+          }}
+          aria-label={`Restar presupuesto de ${label}`}
+        />
+        <button className="icon-button save" type="button" onClick={() => onSave(Number(draft))} aria-label="Confirmar resta">
+          <Check size={16} strokeWidth={2.5} />
+        </button>
+        <button className="icon-button cancel" type="button" onClick={onCancel} aria-label="Cancelar resta">
+          <X size={16} strokeWidth={2.5} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({
   label,
   icon,
@@ -128,6 +171,7 @@ function StatCard({
   tone,
   percent,
   onEdit,
+  onSubtract,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -135,14 +179,20 @@ function StatCard({
   tone: "coral" | "blue" | "yellow";
   percent: string;
   onEdit: () => void;
+  onSubtract?: () => void;
 }) {
   return (
     <article className={`stat-card ${tone}`}>
       <div className="stat-card-top">
         <div className="stat-icon">{icon}</div>
-        <button className="edit-link" type="button" onClick={onEdit}>
-          <Pencil size={13} /> Editar
-        </button>
+        <div className="stat-actions">
+          <button className="edit-link" type="button" onClick={onEdit}>
+            <Pencil size={13} /> Editar
+          </button>
+          {onSubtract && <button className="subtract-link" type="button" onClick={onSubtract}>
+            <MinusCircle size={13} /> Restar
+          </button>}
+        </div>
       </div>
       <p className="stat-label">{label}</p>
       <p className="stat-value">{formatMoney(value)}</p>
@@ -159,6 +209,7 @@ export default function Home() {
   const [isAdding, setIsAdding] = useState(false);
   const [amountDraft, setAmountDraft] = useState("");
   const [editing, setEditing] = useState<EditableKey | null>(null);
+  const [subtracting, setSubtracting] = useState<EditableKey | null>(null);
   const [showDetails, setShowDetails] = useState(true);
 
   useEffect(() => {
@@ -209,7 +260,31 @@ export default function Home() {
       return { ...current, [key]: value };
     });
     setEditing(null);
+    setSubtracting(null);
     toast.success("Cambio guardado.");
+  };
+
+  const subtractBudget = (key: Exclude<EditableKey, "ocio">, amount: number) => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Escribe una cantidad mayor que cero.");
+      return;
+    }
+    const roundedAmount = Math.round(amount);
+    const available = budget[key];
+    if (roundedAmount > available) {
+      toast.error(`No puedes restar más de ${formatMoney(available)}.`);
+      return;
+    }
+    setBudget((current) => {
+      const nextValue = current[key] - roundedAmount;
+      if (key === "alimento" || key === "productos" || key === "juegos") {
+        return { ...current, [key]: nextValue, ocio: current.ocio - roundedAmount };
+      }
+      return { ...current, [key]: nextValue };
+    });
+    setSubtracting(null);
+    const label = key === "ahorros" ? "Ahorros" : key === "emprendimiento" ? "Emprendimiento" : key;
+    toast.success(`${formatMoney(roundedAmount)} restados de ${label}.`);
   };
 
   const resetBudget = () => {
@@ -274,13 +349,19 @@ export default function Home() {
 
         <section className="stats-grid">
           <StatCard label="Ocio" icon={<Gamepad2 size={21} />} value={leisureTotal} tone="coral" percent={`${leisurePercent}%`} onEdit={() => setEditing("ocio")} />
-          <StatCard label="Ahorros" icon={<Coins size={21} />} value={budget.ahorros} tone="blue" percent={`${savingsPercent}%`} onEdit={() => setEditing("ahorros")} />
-          <StatCard label="Emprendimiento" icon={<Lightbulb size={21} />} value={budget.emprendimiento} tone="yellow" percent={`${businessPercent}%`} onEdit={() => setEditing("emprendimiento")} />
+          <StatCard label="Ahorros" icon={<Coins size={21} />} value={budget.ahorros} tone="blue" percent={`${savingsPercent}%`} onEdit={() => setEditing("ahorros")} onSubtract={() => setSubtracting("ahorros")} />
+          <StatCard label="Emprendimiento" icon={<Lightbulb size={21} />} value={budget.emprendimiento} tone="yellow" percent={`${businessPercent}%`} onEdit={() => setEditing("emprendimiento")} onSubtract={() => setSubtracting("emprendimiento")} />
         </section>
 
         {editing && !["alimento", "productos", "juegos"].includes(editing) && (
           <div className="inline-editor main-editor">
             <EditField label={editing === "ocio" ? "Nuevo total de Ocio" : editing === "ahorros" ? "Nuevo total de Ahorros" : "Nuevo total de Emprendimiento"} value={editing === "ocio" ? leisureTotal : budget[editing]} onSave={(value) => saveEdit(editing, value)} onCancel={() => setEditing(null)} />
+          </div>
+        )}
+
+        {subtracting && ["ahorros", "emprendimiento"].includes(subtracting) && (
+          <div className="inline-editor main-editor">
+            <SubtractField label={subtracting === "ahorros" ? "Ahorros" : "Emprendimiento"} maxValue={budget[subtracting]} onSave={(value) => subtractBudget(subtracting as "ahorros" | "emprendimiento", value)} onCancel={() => setSubtracting(null)} />
           </div>
         )}
 
@@ -290,9 +371,9 @@ export default function Home() {
             <div className="leisure-total"><span>Total ocio</span><strong>{formatMoney(leisureTotal)}</strong><ChevronDown size={18} className={showDetails ? "rotated" : ""} /></div>
           </button>
           {showDetails && <div className="subcategories-grid">
-            <Subcategory icon={<Utensils size={18} />} label="Alimento" hint="25% de ocio" value={budget.alimento} color="orange" editing={editing === "alimento"} onEdit={() => setEditing("alimento")} onSave={(value) => saveEdit("alimento", value)} onCancel={() => setEditing(null)} />
-            <Subcategory icon={<ShoppingBag size={18} />} label="Productos" hint="50% de ocio" value={budget.productos} color="pink" editing={editing === "productos"} onEdit={() => setEditing("productos")} onSave={(value) => saveEdit("productos", value)} onCancel={() => setEditing(null)} />
-            <Subcategory icon={<Gamepad2 size={18} />} label="Juegos" hint="25% de ocio" value={budget.juegos} color="purple" editing={editing === "juegos"} onEdit={() => setEditing("juegos")} onSave={(value) => saveEdit("juegos", value)} onCancel={() => setEditing(null)} />
+            <Subcategory icon={<Utensils size={18} />} label="Alimento" hint="25% de ocio" value={budget.alimento} color="orange" editing={editing === "alimento"} subtracting={subtracting === "alimento"} onEdit={() => setEditing("alimento")} onSubtract={() => setSubtracting("alimento")} onSave={(value) => saveEdit("alimento", value)} onSubtractSave={(value) => subtractBudget("alimento", value)} onCancel={() => { setEditing(null); setSubtracting(null); }} />
+            <Subcategory icon={<ShoppingBag size={18} />} label="Productos" hint="50% de ocio" value={budget.productos} color="pink" editing={editing === "productos"} subtracting={subtracting === "productos"} onEdit={() => setEditing("productos")} onSubtract={() => setSubtracting("productos")} onSave={(value) => saveEdit("productos", value)} onSubtractSave={(value) => subtractBudget("productos", value)} onCancel={() => { setEditing(null); setSubtracting(null); }} />
+            <Subcategory icon={<Gamepad2 size={18} />} label="Juegos" hint="25% de ocio" value={budget.juegos} color="purple" editing={editing === "juegos"} subtracting={subtracting === "juegos"} onEdit={() => setEditing("juegos")} onSubtract={() => setSubtracting("juegos")} onSave={(value) => saveEdit("juegos", value)} onSubtractSave={(value) => subtractBudget("juegos", value)} onCancel={() => { setEditing(null); setSubtracting(null); }} />
           </div>}
         </section>
 
@@ -302,10 +383,10 @@ export default function Home() {
   );
 }
 
-function Subcategory({ icon, label, hint, value, color, editing, onEdit, onSave, onCancel }: { icon: React.ReactNode; label: string; hint: string; value: number; color: string; editing: boolean; onEdit: () => void; onSave: (value: number) => void; onCancel: () => void }) {
+function Subcategory({ icon, label, hint, value, color, editing, subtracting, onEdit, onSubtract, onSave, onSubtractSave, onCancel }: { icon: React.ReactNode; label: string; hint: string; value: number; color: string; editing: boolean; subtracting: boolean; onEdit: () => void; onSubtract: () => void; onSave: (value: number) => void; onSubtractSave: (value: number) => void; onCancel: () => void }) {
   return <article className={`subcategory-card ${color}`}>
     <div className="subcat-top"><div className="subcat-icon">{icon}</div><span className="subcat-hint">{hint}</span></div>
     <p className="subcat-label">{label}</p>
-    {editing ? <EditField label={label} value={value} onSave={onSave} onCancel={onCancel} /> : <div className="subcat-bottom"><strong>{formatMoney(value)}</strong><button type="button" onClick={onEdit} aria-label={`Editar ${label}`}><Pencil size={14} /></button></div>}
+    {editing ? <EditField label={label} value={value} onSave={onSave} onCancel={onCancel} /> : subtracting ? <SubtractField label={label} maxValue={value} onSave={onSubtractSave} onCancel={onCancel} /> : <div className="subcat-bottom"><strong>{formatMoney(value)}</strong><div className="subcat-actions"><button type="button" onClick={onEdit} aria-label={`Editar ${label}`}><Pencil size={14} /></button><button type="button" onClick={onSubtract} aria-label={`Restar de ${label}`}><MinusCircle size={14} /></button></div></div>}
   </article>;
 }

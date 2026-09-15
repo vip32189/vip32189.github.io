@@ -113,12 +113,15 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(238, 109, 80
 .stat-card.blue { background: #dfeee9; color: #274841; }
 .stat-card.yellow { background: #f5edca; color: #554723; }
 .stat-card-top { display: flex; align-items: center; justify-content: space-between; }
+.stat-actions { display: flex; align-items: center; gap: 10px; }
 .stat-icon { display: grid; place-items: center; width: 37px; height: 37px; border-radius: 11px; }
 .coral .stat-icon { color: #e56b4d; background: rgba(255,255,255,.58); }
 .blue .stat-icon { color: #3f8c7e; background: rgba(255,255,255,.6); }
 .yellow .stat-icon { color: #bf962c; background: rgba(255,255,255,.58); }
 .edit-link { display: flex; align-items: center; gap: 5px; color: currentColor; opacity: .55; background: transparent; font-size: 10px; font-weight: 700; transition: opacity .16s; }
 .edit-link:hover { opacity: 1; }
+.subtract-link { display: flex; align-items: center; gap: 5px; color: #bd5d4c; opacity: .7; background: transparent; font-size: 10px; font-weight: 800; transition: opacity .16s; }
+.subtract-link:hover { opacity: 1; }
 .stat-label { position: relative; z-index: 1; margin: 25px 0 6px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; }
 .stat-value { position: relative; z-index: 1; margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 600; letter-spacing: -.06em; }
 .stat-card-footer { position: absolute; right: 25px; bottom: 22px; left: 25px; display: flex; align-items: center; gap: 8px; }
@@ -162,6 +165,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(238, 109, 80
 .subcat-bottom strong { color: #29352e; font-family: 'Space Grotesk', sans-serif; font-size: 19px; letter-spacing: -.05em; }
 .subcat-bottom button { display: grid; place-items: center; padding: 5px; color: #b2b9b0; background: transparent; border-radius: 6px; }
 .subcat-bottom button:hover { color: #3f4a42; background: #f2f3ed; }
+.subcat-actions { display: flex; align-items: center; gap: 3px; }
+.subcat-actions button:last-child { color: #cf7567; }
 .subcategory-card .edit-field { margin-top: 10px; }
 .subcategory-card .edit-field label { display: none; }
 .subcategory-card .edit-field-row input { font-size: 13px; }
