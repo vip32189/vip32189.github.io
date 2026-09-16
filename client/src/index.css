@@ -246,3 +246,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(238, 109, 80
   .movement-title-row { align-items: flex-start; flex-direction: column; gap: 3px; }
   .movement-amount { font-size: 11px; }
 }
+
+.negative-value { color: #cf5f52 !important; }
+.stat-card.in-debt { box-shadow: inset 0 0 0 2px rgba(207,95,82,.25); }
+.stat-card.in-debt .stat-value { color: #cf5f52; }
+.abono-link, .subcat-abono { display: flex; align-items: center; gap: 5px; color: #2f8c70; opacity: .8; background: transparent; font-size: 10px; font-weight: 800; }
+.abono-link:hover, .subcat-abono:hover { opacity: 1; }
+.subcat-abono { display: grid; place-items: center; padding: 5px; font-size: 0; }
+.subcat-abono svg { width: 14px; height: 14px; }
+.movement-side { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 6px; }
+.undo-link { display: flex; align-items: center; gap: 4px; padding: 4px 6px; color: #8a938b; background: #f1f2ed; border-radius: 6px; font-size: 9px; font-weight: 800; }
+.undo-link:hover { color: #cf6d5d; background: #f9e5df; }
+.undone-label { color: #a5aca5; font-family: 'DM Mono', monospace; font-size: 8px; text-transform: uppercase; }
+.movement-item.is-undone { opacity: .58; }
+.movement-icon.abono { color: #2f8c70; background: #e5f4eb; }
+.movement-icon.undo { color: #8a938b; background: #eeeee8; }
+.movement-amount.abono { color: #2f8c70; }
+.movement-amount.undo { color: #8a938b; }
+@media (max-width: 680px) { .movement-side { gap: 4px; } .undo-link { font-size: 8px; } }
