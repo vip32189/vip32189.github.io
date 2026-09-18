@@ -280,3 +280,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(238, 109, 80
 .history-search button { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 auto; color: #8b968d; background: #f0f1eb; border-radius: 50%; }
 .history-search button:hover { color: #e56b4d; }
 @media (max-width: 680px) { .footer-actions { align-items: flex-start; flex-direction: column; gap: 10px; } .history-tools { align-self: stretch; justify-content: space-between; } .history-search input { font-size: 11px; } }
+
+.topbar-actions { display: flex; align-items: center; gap: 22px; }
+.top-reset-button { display: flex; align-items: center; gap: 6px; padding: 8px 11px; color: #8b655c; background: #fff1ed; border: 1px solid #f4d5cc; border-radius: 8px; font-size: 10px; font-weight: 800; transition: transform .16s ease, background .16s ease, color .16s ease; }
+.top-reset-button:hover { color: #b8493b; background: #ffe4dc; transform: translateY(-1px); }
+.reset-overlay { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(31, 38, 33, .42); backdrop-filter: blur(7px); }
+.reset-dialog { width: min(100%, 390px); padding: 27px; background: #fbfcf8; border: 1px solid rgba(255,255,255,.65); border-radius: 20px; box-shadow: 0 24px 70px rgba(30,39,33,.22); text-align: center; animation: reset-dialog-in .18s ease-out; }
+.reset-dialog-icon { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 14px; color: #c65c4d; background: #ffe9e2; border-radius: 13px; }
+.reset-dialog h2 { margin: 0; color: #25302a; font-family: 'Space Grotesk', sans-serif; font-size: 22px; letter-spacing: -.045em; }
+.reset-dialog p { margin: 10px auto 22px; max-width: 290px; color: #7c887e; font-size: 11px; line-height: 1.55; }
+.reset-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.reset-dialog-actions button { padding: 11px 14px; border-radius: 10px; font-size: 11px; font-weight: 850; transition: transform .16s ease, background .16s ease; }
+.reset-dialog-actions button:active { transform: scale(.97); }
+.reset-no { color: #526158; background: #edf0ea; }
+.reset-no:hover { background: #e2e7df; }
+.reset-yes { color: white; background: #d96b59; box-shadow: 0 7px 16px rgba(217,107,89,.2); }
+.reset-yes:hover { background: #c95c4b; }
+@keyframes reset-dialog-in { from { opacity: 0; transform: translateY(7px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 680px) { .topbar-actions { gap: 10px; } .topbar-note { display: none; } .top-reset-button { padding: 7px 8px; font-size: 9px; } }
