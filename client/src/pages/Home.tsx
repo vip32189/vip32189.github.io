@@ -37,6 +37,58 @@ const leisureKeys: Array<"alimento" | "productos" | "juegos"> = ["alimento", "pr
 function splitEqually(amount: number, parts: number) { const base = Math.floor(amount / parts); const remainder = amount % parts; return Array.from({ length: parts }, (_, index) => base + (index < remainder ? 1 : 0)); }
 function splitLeisure(amount: number) { const products = Math.floor(amount / 2); const remaining = amount - products; const food = Math.floor(remaining / 2); return [food, products, remaining - food]; }
 function distributeAmount(amount: number): Budget { const [ocio, ahorros, emprendimiento] = splitEqually(amount, 3); const [alimento, productos, juegos] = splitLeisure(ocio); return { ocio, ahorros, emprendimiento, alimento, productos, juegos }; }
+function applyDebtPayments(amount: number, budget: Budget): { after: Budget; remaining: number; payments: Array<{ label: string; amount: number }> } {
+  let remaining = amount;
+  const after = { ...budget };
+  const payments: Array<{ label: string; amount: number }> = [];
+  const negativeLeisure = leisureKeys.filter((key) => after[key] < 0);
+  const groups = [
+    ...(after.ahorros < 0 ? [{ label: "Ahorros", debt: -after.ahorros, keys: ["ahorros" as EditableKey] }] : []),
+    ...(after.emprendimiento < 0 ? [{ label: "Emprendimiento", debt: -after.emprendimiento, keys: ["emprendimiento" as EditableKey] }] : []),
+    ...(negativeLeisure.length ? [{ label: "Ocio", debt: negativeLeisure.reduce((sum, key) => sum + -after[key], 0), keys: negativeLeisure as EditableKey[] }] : []),
+  ];
+  const paidByGroup = new Map<string, number>();
+  while (remaining > 0 && groups.some((group) => group.debt - (paidByGroup.get(group.label) || 0) > 0)) {
+    const active = groups.filter((group) => group.debt - (paidByGroup.get(group.label) || 0) > 0);
+    const shares = splitEqually(remaining, active.length);
+    let paidThisRound = 0;
+    active.forEach((group, index) => {
+      const payment = Math.min(shares[index], group.debt - (paidByGroup.get(group.label) || 0));
+      if (payment <= 0) return;
+      paidByGroup.set(group.label, (paidByGroup.get(group.label) || 0) + payment);
+      remaining -= payment;
+      paidThisRound += payment;
+    });
+    if (!paidThisRound) break;
+  }
+  groups.forEach((group) => {
+    const payment = paidByGroup.get(group.label) || 0;
+    if (!payment) return;
+    if (group.label === "Ocio") {
+      let ocioRemaining = payment;
+      const activeKeys = group.keys.filter((key) => after[key] < 0);
+      const paidByKey = new Map<EditableKey, number>();
+      while (ocioRemaining > 0 && activeKeys.some((key) => -after[key] - (paidByKey.get(key) || 0) > 0)) {
+        const openKeys = activeKeys.filter((key) => -after[key] - (paidByKey.get(key) || 0) > 0);
+        const shares = splitEqually(ocioRemaining, openKeys.length);
+        let paid = 0;
+        openKeys.forEach((key, index) => {
+          const portion = Math.min(shares[index], -after[key] - (paidByKey.get(key) || 0));
+          paidByKey.set(key, (paidByKey.get(key) || 0) + portion);
+          ocioRemaining -= portion;
+          paid += portion;
+        });
+        if (!paid) break;
+      }
+      group.keys.forEach((key) => { const portion = paidByKey.get(key) || 0; after[key] += portion; });
+      after.ocio += payment;
+    } else {
+      after[group.keys[0]] += payment;
+    }
+    payments.push({ label: group.label, amount: payment });
+  });
+  return { after, remaining, payments };
+}
 function readStoredBudget(): Budget {
   try { const parsed = JSON.parse(localStorage.getItem("dinero-en-tres-budget") || "null") as Partial<Budget> | null; if (!parsed) return INITIAL_BUDGET; return Object.keys(INITIAL_BUDGET).reduce((budget, key) => { const value = Number(parsed[key as EditableKey]); budget[key as EditableKey] = Number.isFinite(value) ? Math.round(value) : 0; return budget; }, { ...INITIAL_BUDGET }); } catch { return INITIAL_BUDGET; }
 }
@@ -76,7 +128,7 @@ export default function Home() {
   useEffect(() => { localStorage.setItem("dinero-en-tres-budget", JSON.stringify(budget)); }, [budget]); useEffect(() => { localStorage.setItem(HISTORY_KEY, JSON.stringify(movements)); }, [movements]);
   const total = useMemo(() => budget.ocio + budget.ahorros + budget.emprendimiento, [budget]); const leisureTotal = budget.alimento + budget.productos + budget.juegos; const hasBudget = total !== 0; const leisurePercent = total ? Math.round((leisureTotal / total) * 100) : 0; const savingsPercent = total ? Math.round((budget.ahorros / total) * 100) : 0; const businessPercent = total ? Math.round((budget.emprendimiento / total) * 100) : 0; const negativeLeisureKeys = leisureKeys.filter((key) => budget[key] < 0); const addMovement = (movement: Omit<Movement, "id" | "date" | "before" | "after">, before: Budget, after: Budget) => setMovements((current) => [{ ...movement, id: `${Date.now()}-${Math.random()}`, date: new Date().toISOString(), before, after }, ...current].slice(0, 50));
 
-  const addMoney = () => { const amount = Number(amountDraft); if (!amountDraft || !Number.isFinite(amount) || amount <= 0) { toast.error("Escribe una cantidad mayor que cero."); return; } const rounded = Math.round(amount); const incoming = distributeAmount(rounded); const before = budget; const after = { ocio: before.ocio + incoming.ocio, ahorros: before.ahorros + incoming.ahorros, emprendimiento: before.emprendimiento + incoming.emprendimiento, alimento: before.alimento + incoming.alimento, productos: before.productos + incoming.productos, juegos: before.juegos + incoming.juegos }; setBudget(after); addMovement({ kind: "add", label: "Ingreso agregado", amount: rounded, note: addNote.trim(), detail: `Repartido entre Ocio (${formatMoney(incoming.ocio)}), Ahorros (${formatMoney(incoming.ahorros)}) y Emprendimiento (${formatMoney(incoming.emprendimiento)}).` }, before, after); setAmountDraft(""); setAddNote(""); setIsAdding(false); toast.success(`${formatMoney(rounded)} se repartió correctamente.`); };
+  const addMoney = () => { const amount = Number(amountDraft); if (!amountDraft || !Number.isFinite(amount) || amount <= 0) { toast.error("Escribe una cantidad mayor que cero."); return; } const rounded = Math.round(amount); const before = budget; const debtResult = applyDebtPayments(rounded, before); const incoming = distributeAmount(debtResult.remaining); const after = { ocio: debtResult.after.ocio + incoming.ocio, ahorros: debtResult.after.ahorros + incoming.ahorros, emprendimiento: debtResult.after.emprendimiento + incoming.emprendimiento, alimento: debtResult.after.alimento + incoming.alimento, productos: debtResult.after.productos + incoming.productos, juegos: debtResult.after.juegos + incoming.juegos }; const debtText = debtResult.payments.length ? ` Primero se abonó ${debtResult.payments.map((payment) => `${formatMoney(payment.amount)} a ${payment.label}`).join(", ")}.` : ""; setBudget(after); addMovement({ kind: "add", label: "Ingreso agregado", amount: rounded, note: addNote.trim(), detail: `${debtText} El restante (${formatMoney(debtResult.remaining)}) se repartió entre Ocio (${formatMoney(incoming.ocio)}), Ahorros (${formatMoney(incoming.ahorros)}) y Emprendimiento (${formatMoney(incoming.emprendimiento)}).` }, before, after); setAmountDraft(""); setAddNote(""); setIsAdding(false); toast.success(`${formatMoney(rounded)} se abonó a deudas y se repartió correctamente.`); };
 
   const saveEdit = (key: EditableKey, nextValue: number, note: string) => { if (!Number.isFinite(nextValue)) { toast.error("Usa un valor válido de pesos colombianos."); return; } const value = Math.round(nextValue); const before = budget; let after: Budget; if (key === "ocio") { const [alimento, productos, juegos] = splitLeisure(value); after = { ...before, ocio: value, alimento, productos, juegos }; } else if (leisureKeys.includes(key as "alimento" | "productos" | "juegos")) { after = { ...before, [key]: value, ocio: key === "alimento" ? value + before.productos + before.juegos : key === "productos" ? before.alimento + value + before.juegos : before.alimento + before.productos + value }; } else after = { ...before, [key]: value }; setBudget(after); addMovement({ kind: "edit", label: `Categoría modificada · ${categoryLabel(key)}`, amount: value, note: note.trim(), detail: `Antes: ${formatMoney(key === "ocio" ? leisureTotal : before[key])} · Ahora: ${formatMoney(value)}.` }, before, after); setEditing(null); setAddingTo(null); toast.success("Cambio guardado."); };
 
